@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>薬剤師の一包化ゲーム</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+  <!-- React と ReactDOM -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const MedicinePackingGame = () => {
+      // 3種類の薬を定義
+      const medicineTypes = [
+        { id: 1, name: "薬A", color: "bg-red-500" },
+        { id: 2, name: "薬B", color: "bg-blue-500" },
+        { id: 3, name: "薬C", color: "bg-green-500" }
+      ];
+
+      // 選択中の薬のステート
+      const [selectedMedicine, setSelectedMedicine] = useState(medicineTypes[0]);
+      
+      // 45個のマスの状態を管理（各マスには最大3錠まで薬をセット可能）
+      const [cells, setCells] = useState(Array(45).fill().map(() => ([])));
+      
+      // マスをクリックした時の処理
+      const handleCellClick = (index) => {
+        const newCells = [...cells];
+        // 既に3錠ある場合は追加しない
+        if (newCells[index].length < 3) {
+          newCells[index] = [...newCells[index], selectedMedicine];
+          setCells(newCells);
+        }
+      };
+      
+      // 薬を選択する処理
+      const selectMedicine = (medicine) => {
+        setSelectedMedicine(medicine);
+      };
+      
+      // マスをリセットする処理
+      const resetCell = (index) => {
+        const newCells = [...cells];
+        newCells[index] = [];
+        setCells(newCells);
+      };
+      
+      // 全てのマスをリセットする処理
+      const resetAllCells = () => {
+        setCells(Array(45).fill().map(() => ([])));
+      };
+      
+      return (
+        <div className="p-4 max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">薬剤師の一包化ゲーム</h1>
+          
+          {/* 薬選択パネル */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">薬を選択してください</h2>
+            <div className="flex space-x-4">
+              {medicineTypes.map((medicine) => (
+                <button
+                  key={medicine.id}
+                  onClick={() => selectMedicine(medicine)}
+                  className={`p-2 rounded-md ${medicine.color} text-white ${selectedMedicine.id === medicine.id ? 'ring-4 ring-yellow-400' : ''}`}
+                >
+                  {medicine.name}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2">
+              <p>現在選択中: <span className={`px-2 py-1 rounded ${selectedMedicine.color} text-white`}>{selectedMedicine.name}</span></p>
+            </div>
+          </div>
+          
+          {/* マスのグリッド */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">一包化表（マスをクリックして薬をセット）</h2>
+            <div className="grid grid-cols-5 gap-2">
+              {cells.map((cell, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleCellClick(index)}
+                  className="border-2 border-gray-300 h-24 p-1 relative cursor-pointer rounded-md hover:bg-gray-100"
+                >
+                  <div className="absolute top-0 right-0 text-xs bg-gray-200 px-1 rounded-bl">{index + 1}</div>
+                  <div className="flex flex-col items-center justify-center h-full">
+                    {cell.length > 0 ? (
+                      <div className="flex flex-col items-center">
+                        {cell.map((med, i) => (
+                          <div key={i} className={`w-8 h-4 rounded-full mb-1 ${med.color}`}></div>
+                        ))}
+                        <span className="text-xs mt-1">{cell.length}/3</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">空</span>
+                    )}
+                  </div>
+                  {cell.length > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); resetCell(index); }}
+                      className="absolute bottom-0 right-0 text-xs bg-red-500 text-white px-1 rounded-tl"
+                    >
+                      消去
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* リセットボタン */}
+          <div className="text-center">
+            <button
+              onClick={resetAllCells}
+              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+            >
+              全てリセット
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // アプリをレンダリング
+    ReactDOM.render(<MedicinePackingGame />, document.getElementById('root'));
+  </script>
+</body>
+</html>
