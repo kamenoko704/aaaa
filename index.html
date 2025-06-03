@@ -1,138 +1,170 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>薬剤師の一包化ゲーム</title>
-  <!-- Tailwind CSS CDN - 代わりに直接CSSを読み込む -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-  <!-- React と ReactDOM -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
-  <!-- Babel -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+<meta charset="UTF-8">
+<title>カレンダー処方管理</title>
+<style>
+  /* ── 画面用 ───────────────────────── */
+  body{font-family:'Segoe UI',sans-serif;background:#f9f9f9;margin:0;padding:20px;}
+  .controls{text-align:center;margin:18px;}
+  .controls input{margin:0 6px;padding:4px;}
+  #calendarTitle{font-size:32px;text-align:left;margin:6px 0 12px 0;}
+
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:1120px;margin:0 auto;}
+
+  .cell{border:1px solid #bbb;background:#fff;height:110px;padding:6px;box-sizing:border-box;
+        position:relative;border-radius:6px;box-shadow:1px 1px 3px rgba(0,0,0,.05);
+        display:flex;flex-direction:column;}
+
+  .weekday-header{height:42px;display:flex;align-items:center;justify-content:center;
+                  font-weight:bold;background:#f5f5f5;}
+
+  /* 土日色分け（ヘッダー＋当月の日付数字） */
+  .weekday-header.sunday,.sunday .day-number{color:red;}
+  .weekday-header.saturday,.saturday .day-number{color:blue;}
+
+  /* 当月以外はグレーで上書き（入力は可能） */
+  .other-month .day-number{color:#888!important;}
+  .other-month .input-area input{color:#888;}
+
+  .day-number{font-weight:bold;margin-bottom:4px;font-size:15px;}
+  .input-area input{display:block;width:100%;padding:2px;margin-bottom:3px;font-size:20px;box-sizing:border-box;}
+
+  /* ── 印刷用 ───────────────────────── */
+  @page{size:A4 landscape;margin:8mm;}
+  @media print{
+    .controls{display:none;}
+    #calendarTitle{font-size:26px;margin:0 0 6px 0;}
+    .calendar{gap:2px;}
+    .cell{height:100px;padding:4px;}
+    .weekday-header{height:30px;font-size:13px;}
+    .day-number{font-size:13px;margin-bottom:2px;}
+    .input-area input{font-size:20px;}       /* 印刷時も 20px */
+    input{border:none;background:none;}
+    .hide-print{display:none!important;}
+  }
+</style>
 </head>
-<body class="bg-gray-50">
-  <div id="root"></div>
+<body>
 
-  <script type="text/babel">
-    const { useState } = React;
+<h2 id="calendarTitle"></h2>
 
-    const MedicinePackingGame = () => {
-      // 3種類の薬を定義
-      const medicineTypes = [
-        { id: 1, name: "薬A", color: "bg-red-500" },
-        { id: 2, name: "薬B", color: "bg-blue-500" },
-        { id: 3, name: "薬C", color: "bg-green-500" }
-      ];
+<div class="controls">
+  年:<input type="number" id="yearInput" value="2025" style="width:80px;">
+  月:<input type="number" id="monthInput" value="6"  style="width:50px;">
+  プラス日数:<input type="number" id="plusDays" value="8" style="width:50px;">
+  <button onclick="generateCalendar()">更新</button>
+  <button onclick="window.print()">印刷</button>
+</div>
 
-      // 選択中の薬のステート
-      const [selectedMedicine, setSelectedMedicine] = useState(medicineTypes[0]);
-      
-      // 45個のマスの状態を管理（各マスには最大3錠まで薬をセット可能）
-      const [cells, setCells] = useState(Array(45).fill().map(() => ([])));
-      
-      // マスをクリックした時の処理
-      const handleCellClick = (index) => {
-        const newCells = [...cells];
-        // 既に3錠ある場合は追加しない
-        if (newCells[index].length < 3) {
-          newCells[index] = [...newCells[index], selectedMedicine];
-          setCells(newCells);
-        }
-      };
-      
-      // 薬を選択する処理
-      const selectMedicine = (medicine) => {
-        setSelectedMedicine(medicine);
-      };
-      
-      // マスをリセットする処理
-      const resetCell = (index) => {
-        const newCells = [...cells];
-        newCells[index] = [];
-        setCells(newCells);
-      };
-      
-      // 全てのマスをリセットする処理
-      const resetAllCells = () => {
-        setCells(Array(45).fill().map(() => ([])));
-      };
-      
-      return (
-        <div className="p-4 max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">薬剤師の一包化ゲーム</h1>
-          
-          {/* 薬選択パネル */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">薬を選択してください</h2>
-            <div className="flex space-x-4">
-              {medicineTypes.map((medicine) => (
-                <button
-                  key={medicine.id}
-                  onClick={() => selectMedicine(medicine)}
-                  className={`p-2 rounded-md ${medicine.color} text-white ${selectedMedicine.id === medicine.id ? 'ring-4 ring-yellow-400' : ''}`}
-                >
-                  {medicine.name}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2">
-              <p>現在選択中: <span className={`px-2 py-1 rounded ${selectedMedicine.color} text-white`}>{selectedMedicine.name}</span></p>
-            </div>
-          </div>
-          
-          {/* マスのグリッド */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">一包化表（マスをクリックして薬をセット）</h2>
-            <div className="grid grid-cols-5 gap-2">
-              {cells.map((cell, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleCellClick(index)}
-                  className="border-2 border-gray-300 h-24 p-1 relative cursor-pointer rounded-md hover:bg-gray-100"
-                >
-                  <div className="absolute top-0 right-0 text-xs bg-gray-200 px-1 rounded-bl">{index + 1}</div>
-                  <div className="flex flex-col items-center justify-center h-full">
-                    {cell.length > 0 ? (
-                      <div className="flex flex-col items-center">
-                        {cell.map((med, i) => (
-                          <div key={i} className={`w-8 h-4 rounded-full mb-1 ${med.color}`}></div>
-                        ))}
-                        <span className="text-xs mt-1">{cell.length}/3</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">空</span>
-                    )}
-                  </div>
-                  {cell.length > 0 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); resetCell(index); }}
-                      className="absolute bottom-0 right-0 text-xs bg-red-500 text-white px-1 rounded-tl"
-                    >
-                      消去
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* リセットボタン */}
-          <div className="text-center">
-            <button
-              onClick={resetAllCells}
-              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700"
-            >
-              全てリセット
-            </button>
-          </div>
-        </div>
-      );
-    };
+<div id="calendar" class="calendar"></div>
 
-    // アプリをレンダリング
-    ReactDOM.render(<MedicinePackingGame />, document.getElementById('root'));
-  </script>
+<script>
+let cells=[]; // 順番どおりのセル参照
+
+function generateCalendar(){
+  const cal=document.getElementById('calendar');
+  cal.innerHTML=''; cells=[];
+
+  const y=+yearInput.value, m=+monthInput.value-1, plus=+plusDays.value;
+  calendarTitle.textContent=`${y}年 ${m+1}月`;
+
+  const first=new Date(y,m,1);
+  const startDay=first.getDay();
+  const monthDays=new Date(y,m+1,0).getDate();
+  const prevDays = new Date(y,m,0).getDate();
+
+  // 曜日ヘッダー
+  ['日','月','火','水','木','金','土'].forEach(d=>{
+    const h=document.createElement('div');
+    h.className='cell weekday-header';
+    if(d==='日')h.classList.add('sunday');
+    if(d==='土')h.classList.add('saturday');
+    h.textContent=d; cal.appendChild(h);
+  });
+
+  // 必要セル数 35 か 42
+  const totalSlots = (startDay+monthDays)<=35?35:42;
+  let slotIdx=0;
+
+  // ===== 前月 =====
+  for(let i=0;i<startDay;i++,slotIdx++){
+    const dayNum=prevDays-startDay+i+1;
+    cal.appendChild(makeCell(dayNum,'prev',y,m-1,slotIdx));
+  }
+  // ===== 当月 =====
+  for(let d=1;d<=monthDays;d++,slotIdx++){
+    cal.appendChild(makeCell(d,'current',y,m,slotIdx));
+  }
+  // ===== 翌月 =====
+  for(let d=1;slotIdx<totalSlots;d++,slotIdx++){
+    cal.appendChild(makeCell(d,'next',y,m+1,slotIdx));
+  }
+
+  // プラス日数変更 → リアルタイム再計算
+  plusDays.removeEventListener('input',recalcAll);
+  plusDays.addEventListener('input',recalcAll);
+}
+
+function makeCell(day,type,year,month,idx){
+  const cell=document.createElement('div');
+  cell.className='cell';
+  if(idx%7===0) cell.classList.add('sunday');
+  if(idx%7===6) cell.classList.add('saturday');
+  if(type!=='current') cell.classList.add('other-month');
+
+  // 日付データ保持
+  cell.dataset.y=year;
+  cell.dataset.m=month;
+  cell.dataset.d=day;
+  cell.idx=idx;
+
+  // 入力欄
+  const memo=document.createElement('input'); memo.placeholder='メモ';
+  const days=document.createElement('input'); days.placeholder='日数'; days.type='number'; days.min=1;
+
+  cell.memo=memo; cell.days=days;
+  cells[idx]=cell;
+
+  memo.addEventListener('input',()=>updateRange(idx));
+  days.addEventListener('input',()=>updateRange(idx));
+
+  cell.innerHTML=`<div class="day-number">${String(day).padStart(2,'0')}</div>`;
+  const area=document.createElement('div'); area.className='input-area';
+  area.append(memo,days); cell.append(area);
+  return cell;
+}
+
+function updateRange(i){
+  const plus=+plusDays.value||0;
+  const cell=cells[i], right=cells[i+1];
+  if(!right) return;
+
+  const memoText=cell.memo.value.trim();
+  const dayCount=parseInt(cell.days.value);
+  if(memoText && !isNaN(dayCount)){
+    const y=+cell.dataset.y, m=+cell.dataset.m, d=+cell.dataset.d;
+    const start=new Date(y,m,d); start.setDate(start.getDate()+plus);
+    const end=new Date(start);   end.setDate(start.getDate()+dayCount-1);
+    right.memo.value=`${start.getMonth()+1}/${start.getDate()}～${end.getMonth()+1}/${end.getDate()}`;
+  }else{
+    right.memo.value='';
+  }
+}
+
+function recalcAll(){
+  cells.forEach((c,i)=>{ if(c.memo.value.trim()||c.days.value.trim()) updateRange(i); });
+}
+
+/* 印刷時：空欄非表示 */
+addEventListener('beforeprint',()=>{
+  document.querySelectorAll('.input-area input').forEach(el=>{
+    if(!el.value.trim()) el.classList.add('hide-print');
+  });
+});
+addEventListener('afterprint',()=>document.querySelectorAll('.hide-print').forEach(el=>el.classList.remove('hide-print')));
+
+generateCalendar();
+</script>
 </body>
 </html>
